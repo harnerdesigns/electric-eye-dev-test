@@ -2,7 +2,7 @@
 Generates a Buy Now Button or Add To Cart Button or nothing,
 depending on the settings set in Theme Settings > Collections 
 Accepts: -
-product: {Object} Product Liquid object (optional) 
+product: {Object} Product Liquid object 
 Usage: 
 {% include
 'ee_collection-buy-now', product: product %} 
@@ -10,192 +10,71 @@ Usage:
 
 {%- if product -%}
     {%- assign variantID = product.variants[0].id -%} 
-{%- endif -%} 
 
-{%- if settings.enable_ee_buy_now == true and settings.enable_ee_add_to_cart != true -%} 
-    {%- assign BuyNow = true -%} 
-{%- elsif settings.enable_ee_buy_now == true and settings.enable_ee_add_to_cart == true -%}
-    {%- assign BuyNow = false -%} 
-{%- endif -%}
+  {%- if settings.enable_ee_buy_now == true and settings.enable_ee_add_to_cart != true -%} 
+      {%- assign BuyNow = true -%} 
+  {%- elsif settings.enable_ee_buy_now == true and settings.enable_ee_add_to_cart == true -%}
+      {%- assign BuyNow = false -%} 
+  {%- endif -%}
 
-{%- assign VariantDropdown = settings.enable_ee_select_variants -%}
+  {%- assign VariantDropdown = settings.enable_ee_select_variants -%}
 
-{% if VariantDropdown and product.variants.size > 1 %}
-    {% assign inStockVariants = product.variants | where: 'available', true %} 
-    {% assign outOfStockVariants = product.variants | where: 'available', false %}
-    {% assign sortedVariants = inStockVariants | concat: outOfStockVariants %} 
-    <select class="ee-variant-dropdown">
-        {%- for variant in sortedVariants -%}
-        <option 
-        data-variant_id="{{variant.id}}"
-        data-variant_price="{{variant.price | money}}"
-        data-variant_image_url="{{variant.image.src | collection_img_url }}"
-        data-variant_available="{{variant.available}}"
-        data-variant_url="{{collection.handle}}{{ variant.url }}"
-        {%- unless variant.available -%}disabled{%- endunless -%}
-        >
-            {{variant.title}} {%- unless variant.available -%}- Out Of Stock{%- endunless -%}
-        </option>
-        {%- endfor -%}
-    </select>
+  {% if VariantDropdown and product.variants.size > 1 %}
+      {% assign inStockVariants = product.variants | where: 'available', true %} 
+      {% assign outOfStockVariants = product.variants | where: 'available', false %}
+      {% assign sortedVariants = inStockVariants | concat: outOfStockVariants %} 
+      <select class="ee-variant-dropdown">
+          {%- for variant in sortedVariants -%}
+          <option 
+          data-variant_id="{{variant.id}}"
+          data-variant_price="{{variant.price | money}}"
+          data-variant_image_url="{{variant.image.src | collection_img_url }}"
+          data-variant_available="{{variant.available}}"
+          data-variant_url="{{collection.handle}}{{ variant.url }}"
+          {%- unless variant.available -%}disabled{%- endunless -%}
+          >
+              {{variant.title}} {%- unless variant.available -%}- Out Of Stock{%- endunless -%}
+          </option>
+          {%- endfor -%}
+      </select>
+
+    {%- endif -%}
+
+  {%- if product.available -%}
+  <button
+    type="button"
+    class="btn ee-atc-btn"
+    data-variant_id="{{ variantID }}"
+    data-redirect={{BuyNow}}
+    data-add-to-cart
+  >
+      <span data-add-to-cart-text>
+
+          {%- if BuyNow == true -%} 
+          Buy Now 
+          {%- else -%}
+          Add To Cart
+          {%- endif -%}
+      </span>
+      <span data-loader class="hide">{%- render 'icon-spinner' -%}</span>
+  </button>
+  <div class="product-form__error-message-wrapper product-form__error-message-wrapper--hidden" data-error-message-wrapper role="alert">
+      <span class="visually-hidden">Error </span>
+      {%- render 'icon-error' -%}
+      <span class="product-form__error-message" data-error-message></span>
+    </div>
+
 
   {%- endif -%}
 
-{%- if product.available -%}
-<button
-  type="button"
-  class="btn ee-atc-btn"
-  data-variant_id="{{ variantID }}"
-  data-redirect={{BuyNow}}
-  data-add-to-cart
->
-    <span data-add-to-cart-text>
 
-        {%- if BuyNow == true -%} 
-        Buy Now 
-        {%- else -%}
-        Add To Cart
-        {%- endif -%}
-    </span>
-    <span data-loader class="hide">{%- render 'icon-spinner' -%}</span>
-</button>
-<div class="product-form__error-message-wrapper product-form__error-message-wrapper--hidden" data-error-message-wrapper role="alert">
-    <span class="visually-hidden">Error </span>
-    {%- render 'icon-error' -%}
-    <span class="product-form__error-message" data-error-message></span>
-  </div>
-
-
+  <style>
+    .ee-atc-btn, .ee-variant-dropdown {
+      display: block;
+      position: relative;
+      z-index: 3;
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+  </style>
 {%- endif -%}
-
-
-<script>
-  window.onload = function() {
-    let ee_buttons = document.getElementsByClassName("ee-atc-btn");
-
-    for (let i = 0; i < ee_buttons.length; i++) {
-      ee_buttons[i].onclick = function(e) {
-        e.preventDefault();
-        var variantID = this.dataset.variant_id;
-        var clicked = this;
-        
-        if (clicked.dataset.redirect === 'true'){
-            // Buy Now Should Only Checkout with selected product, regardless of what was already in cart.
-            clearCart().then(()=>{ buyNow(clicked, variantID)} );
-        } else {
-            buyNow(clicked, variantID);
-        }
-      };
-    }
-
-    let ee_dropdowns = document.getElementsByClassName("ee-variant-dropdown");
-
-    for (let i = 0; i < ee_dropdowns.length; i++) {
-        ee_dropdowns[i].onchange = variantSelectChanged;
-    }
-
-  };
-
-  function buyNow(clicked, variantID) {
-    var parentDiv = clicked.closest('div');
-    var themeProduct = new window.theme.Product(parentDiv);
-
-    toggleLoading(clicked, true);
-
-    fetch("/cart/add.js", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({items: [{  id: variantID, quantity: 1, form_type: 'product'  }] }),
-    }).then(function(data) {
-        toggleLoading(clicked, false);
-
-        var response = data.json().then(function(response) {
-            if (data.status === 200) {
-                console.log(response);
-                themeProduct._setupCartPopup(response.items[0]);
-            if(clicked.dataset.redirect === 'true'){
-                window.location = "/checkout";
-                }
-            } else {
-            parentDiv.querySelector("div[data-error-message-wrapper]").style.display = "block";
-            parentDiv.querySelector("span[data-error-message]").innerHTML = response.description;
-            }
-        });
-    });
-}
-
-function variantSelectChanged(e){
-    var self = e.target
-    var parentDiv = self.closest('div');
-    var currentImg = parentDiv.querySelector('.product-card__image-wrapper img');
-    var currentURL = parentDiv.querySelector('a');
-
-    var selectedOption = self.querySelector('option:checked');
-    var selectedId = selectedOption.dataset.variant_id;
-    var selectedPrice = selectedOption.dataset.variant_price;
-    var selectedImage = selectedOption.dataset.variant_image_url;
-    var selectedURL = selectedOption.dataset.variant_url
-
-    // Change Add To Cart Button Variant ID
-    parentDiv.querySelector('.ee-atc-btn').dataset.variant_id = selectedId;
-    parentDiv.querySelector('.price .price__regular dd .price-item').innerHTML = selectedPrice;
-
-    // Change Image
-    if(selectedImage != "" && !selectedImage.includes('no-image')){
-
-      currentImg.removeAttribute('srcset');
-      currentImg.removeAttribute('sizes');
-      currentImg.removeAttribute('src');
-      currentImg.dataset.srcset = '';
-      currentImg.dataset.widths = '';
-      currentImg.classList.remove('lazyloaded');
-      
-      
-      currentImg.dataset.src = selectedImage;
-      currentImg.classList.add('lazyload');
-    }
-
-    // Change Link URL
-    if(selectedURL != ''){
-      currentURL.setAttribute('href', selectedURL);
-    }
-}
-
-
-  function toggleLoading(clicked, disable){
-
-    if(disable){
-        clicked.querySelector("[data-add-to-cart-text]").classList.add("hide");
-        clicked.querySelector("[data-loader]").classList.remove("hide");
-        clicked.setAttribute("disabled", true);
-    } else {
-        clicked.querySelector("[data-add-to-cart-text]").classList.remove("hide");
-        clicked.querySelector("[data-loader]").classList.add("hide");
-        clicked.removeAttribute("disabled");
-    }
-
-  }
-
-  function clearCart(cb){
-
-    return fetch("/cart/clear.js", 
-    {
-        method: "POST",
-        dataType: "text",
-    }
-);
-
-}
-</script>
-
-<style>
-  .ee-atc-btn, .ee-variant-dropdown {
-    display: block;
-    position: relative;
-    z-index: 3;
-    width: 100%;
-    margin-bottom: 1rem;
-  }
-</style>
