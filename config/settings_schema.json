@@ -1635,5 +1635,22 @@
         "default": true
       }
     ]
+  },
+  {
+    "name": {
+
+      "en": "Collection"
+    },
+    "settings": [
+      {
+        "type": "checkbox",
+        "id": "enable_ee_buy_now",
+        "label": {
+
+          "en": "Show Buy Now Button"
+        },
+        "default": true
+      }
+    ]
   }
 ]
