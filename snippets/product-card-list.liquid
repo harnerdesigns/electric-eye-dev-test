@@ -34,7 +34,7 @@
     <div class="list-view-item__price-column">
       {% include 'product-price-listing', product: product, show_vendor: false %}
     </div>
-  {% include 'ee_collection-buy-now', product: product %}
+  {% render 'ee_collection-buy-now', product: product %}
 
   </div>
 </div>
