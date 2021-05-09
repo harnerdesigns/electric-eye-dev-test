@@ -1,0 +1,86 @@
+{% comment %} 
+Generates a Buy Now Button or Add To Cart Button or nothing,
+depending on the settings set in Theme Settings > Collections 
+Accepts: -
+product: {Object} Product Liquid object (optional) 
+Usage: 
+{% include
+'ee_collection-buy-now', product: product %} 
+{% endcomment %} 
+
+{%- if product -%}
+{%- assign variantID = product.variants[0].id -%} {%- endif -%} {%- if
+settings.enable_ee_buy_now -%} {%- if product.available -%}
+<button
+  onclick="buyNow(e)"
+  type="button"
+  class="btn ee-BuyNow"
+  data-variant_id="{{ variantID }}"
+>
+  Buy Now
+</button>
+
+{%- endif -%} {%- endif -%}
+
+<script>
+  window.onload = function() {
+    let elements = document.getElementsByClassName("ee-BuyNow");
+
+    for (let i = 0; i < elements.length; i++) {
+      elements[i].onclick = function(e) {
+        e.preventDefault();
+        var variantID = this.dataset.variant_id;
+
+        buyNow(this, variantID);
+      };
+    }
+  };
+
+  function buyNow(clicked, variantID) {
+    var OriginalInnerHTML = clicked.innerHTML;
+    clicked.classList.remove("error");
+    clicked.classList.add("loading");
+    clicked.setAttribute("disabled", true);
+    clicked.innerHTML = "Adding...";
+
+    fetch("/cart/add.js", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ items: [{ quantity: 1, id: variantID }] }),
+    }).then(function(data) {
+      clicked.setAttribute("disabled", false);
+
+      console.log(data);
+      var response = data.json().then(function(response) {
+        if (data.status == 200) {
+          clicked.classList.remove("loading");
+          clicked.innerHTML = OriginalInnerHTML;
+          window.location = "/checkout";
+        } else {
+          clicked.classList.add("error");
+          clicked.innerHTML = response.message;
+        }
+      });
+    });
+  }
+</script>
+
+<style>
+  .ee-BuyNow {
+    display: block;
+    position: relative;
+    z-index: 3;
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  .ee-BuyNow.loading {
+    background: #333;
+  }
+
+  .ee-BuyNow.error {
+    background: red;
+  }
+</style>
