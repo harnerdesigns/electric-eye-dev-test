@@ -48,13 +48,17 @@ Usage:
     data-redirect={{BuyNow}}
     data-add-to-cart
   >
-      <span data-add-to-cart-text>
 
-          {%- if BuyNow == true -%} 
-          Buy Now 
-          {%- else -%}
-          Add To Cart
-          {%- endif -%}
+  {%- capture atc_text -%}
+    {%- if BuyNow == true -%} 
+    Buy Now 
+    {%- else -%}
+    Add To Cart
+    {%- endif -%}
+  {%- endcapture -%}
+
+      <span data-add-to-cart-text data-og_atc_text="{{atc_text}}">
+        {{atc_text}}
       </span>
       <span data-loader class="hide">{%- render 'icon-spinner' -%}</span>
   </button>
