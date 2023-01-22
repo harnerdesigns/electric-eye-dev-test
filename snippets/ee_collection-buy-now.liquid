@@ -1,0 +1,84 @@
+{% comment %} 
+Generates a Buy Now Button or Add To Cart Button or nothing,
+depending on the settings set in Theme Settings > Collections 
+Accepts: -
+product: {Object} Product Liquid object 
+Usage: 
+{% render
+'ee_collection-buy-now', product: product %} 
+{% endcomment %} 
+
+{%- if product -%}
+    {%- assign variantID = product.variants[0].id -%} 
+
+  {%- if settings.enable_ee_buy_now == true and settings.enable_ee_add_to_cart != true -%} 
+      {%- assign BuyNow = true -%} 
+  {%- elsif settings.enable_ee_buy_now == true and settings.enable_ee_add_to_cart == true -%}
+      {%- assign BuyNow = false -%} 
+  {%- endif -%}
+
+  {%- assign VariantDropdown = settings.enable_ee_select_variants -%}
+
+  {% if VariantDropdown and product.variants.size > 1 %}
+      {% assign inStockVariants = product.variants | where: 'available', true %} 
+      {% assign outOfStockVariants = product.variants | where: 'available', false %}
+      {% assign sortedVariants = inStockVariants | concat: outOfStockVariants %} 
+      <select class="ee-variant-dropdown">
+          {%- for variant in sortedVariants -%}
+          <option 
+          data-variant_id="{{variant.id}}"
+          data-variant_price="{{variant.price | money}}"
+          data-variant_image_url="{{variant.image.src | collection_img_url }}"
+          data-variant_available="{{variant.available}}"
+          data-variant_url="{{collection.handle}}{{ variant.url }}"
+          {%- unless variant.available -%}disabled{%- endunless -%}
+          >
+              {{variant.title}} {%- unless variant.available -%}- Out Of Stock{%- endunless -%}
+          </option>
+          {%- endfor -%}
+      </select>
+
+    {%- endif -%}
+
+  {%- if product.available -%}
+  <button
+    type="button"
+    class="btn ee-atc-btn"
+    data-variant_id="{{ variantID }}"
+    data-redirect={{BuyNow}}
+    data-add-to-cart
+  >
+
+  {%- capture atc_text -%}
+    {%- if BuyNow == true -%} 
+    Buy Now 
+    {%- else -%}
+    Add To Cart
+    {%- endif -%}
+  {%- endcapture -%}
+
+      <span data-add-to-cart-text data-og_atc_text="{{atc_text}}">
+        {{atc_text}}
+      </span>
+      <span data-loader class="hide">{%- render 'icon-spinner' -%}</span>
+  </button>
+  <div class="product-form__error-message-wrapper product-form__error-message-wrapper--hidden" data-error-message-wrapper role="alert">
+      <span class="visually-hidden">Error </span>
+      {%- render 'icon-error' -%}
+      <span class="product-form__error-message" data-error-message></span>
+    </div>
+
+
+  {%- endif -%}
+
+
+  <style>
+    .ee-atc-btn, .ee-variant-dropdown {
+      display: block;
+      position: relative;
+      z-index: 3;
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+  </style>
+{%- endif -%}
